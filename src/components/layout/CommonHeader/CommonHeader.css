@@ -1,0 +1,187 @@
+/* Common Header Styles - Unified design for all roles */
+.common-header {
+  background: white;
+  border-radius: 16px;
+  padding: 20px 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.common-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.common-header-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  color: white;
+  font-weight: 700;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Role-specific avatar colors */
+.common-header-avatar.admin {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.common-header-avatar.employer {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.common-header-avatar.jobseeker {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.common-header-user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.common-header-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.common-header-role {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.common-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Base button styles */
+.common-header-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+/* Edit button - compact style */
+.common-header-btn.edit-btn {
+  background: linear-gradient(135deg, #667eea, #5a67d8);
+  color: white;
+  padding: 8px 12px;
+  font-size: 16px;
+  min-width: auto;
+  width: auto;
+}
+
+.common-header-btn.edit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Admin-specific buttons */
+.common-header-btn.admin-btn {
+  background: linear-gradient(135deg, #667eea, #5a67d8);
+  color: white;
+}
+
+.common-header-btn.admin-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 25px rgba(22, 27, 32, 0.4);
+}
+
+/* Employer-specific buttons */
+.common-header-btn.employer-btn {
+  background: linear-gradient(135deg, #667eea, #5a67d8);
+  color: white;
+}
+
+.common-header-btn.employer-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 25px rgba(22, 27, 32, 0.4);
+}
+
+/* Job Seeker-specific buttons */
+.common-header-btn.jobseeker-btn {
+  background: linear-gradient(135deg, #667eea, #5a67d8);
+  color: white;
+}
+
+.common-header-btn.jobseeker-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 25px rgba(22, 27, 32, 0.4);
+}
+
+/* Profile button */
+.common-header-btn.profile-btn {
+  background: linear-gradient(135deg, #667eea, #5a67d8);
+  color: white;
+  border: 2px solid #3b82f6;
+}
+
+.common-header-btn.profile-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 25px rgba(22, 27, 32, 0.4);
+}
+
+/* Logout button */
+.common-header-btn.logout-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.common-header-btn.logout-btn:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .common-header {
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px 20px;
+  }
+
+  .common-header-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .common-header-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .common-header-name {
+    font-size: 16px;
+  }
+
+  .common-header-role {
+    font-size: 12px;
+  }
+
+  .common-header-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
