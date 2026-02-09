@@ -120,6 +120,27 @@ const EmployerDashboard = () => {
         return;
       }
 
+      // Allow only one active request cycle per company until admin action.
+      try {
+        const pendingRes = await api.get("/company/pending");
+        const pendingRequests = Array.isArray(pendingRes.data)
+          ? pendingRes.data
+          : [];
+        const hasPendingForCompany = pendingRequests.some(
+          (request) => String(request.companyId) === String(profile.companyId),
+        );
+
+        if (hasPendingForCompany) {
+          showToast(
+            "A change request is already pending. Please wait for admin approval or rejection before submitting another change.",
+            "info",
+          );
+          return;
+        }
+      } catch (pendingError) {
+        console.error("Failed to check pending requests:", pendingError);
+      }
+
       // Track successful and failed updates
       const results = {
         successful: [],

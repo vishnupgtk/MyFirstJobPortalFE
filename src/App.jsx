@@ -1,11 +1,18 @@
 import { Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
-import { Provider } from 'react-redux';
-import { PersistGate } from 'redux-persist/integration/react';
-import { store, persistor } from './store/store';
-import { useAuth, useAuthActions } from './store/hooks';
-import { ROLES, ALL_ROLES, ADMIN_ROLES, EMPLOYER_ROLES, JOB_SEEKER_ROLES, ADMIN_EMPLOYER_ROLES } from "./constants/roles.jsx";
-import config from './config/env';
+import { Provider } from "react-redux";
+import { PersistGate } from "redux-persist/integration/react";
+import { store, persistor } from "./store/store";
+import { useAuth, useAuthActions } from "./store/hooks";
+import {
+  ROLES,
+  ALL_ROLES,
+  ADMIN_ROLES,
+  EMPLOYER_ROLES,
+  JOB_SEEKER_ROLES,
+  ADMIN_EMPLOYER_ROLES,
+} from "./constants/roles.jsx";
+import config from "./config/env";
 
 // Home Components
 import Login from "./components/home/login/Login";
@@ -44,9 +51,8 @@ function AppContent() {
   const { hydrateAuth, markAuthInitialized } = useAuthActions();
 
   useEffect(() => {
-  
     const localToken = localStorage.getItem(config.security.tokenStorageKey);
-    
+
     if (localToken && !isAuthInitialized) {
       try {
         hydrateAuth(localToken);
@@ -72,7 +78,6 @@ function AppContent() {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot" element={<ForgotPassword />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
-
       {/* MAIN DASHBOARD */}
       <Route
         path="/dashboard"
@@ -82,7 +87,6 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-
       {/* ADMIN */}
       <Route
         path="/admin/dashboard"
@@ -92,7 +96,6 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/admin/requests"
         element={
@@ -101,7 +104,6 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/admin/history"
         element={
@@ -110,7 +112,6 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/admin/jobseekers/history"
         element={
@@ -119,7 +120,6 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-
       {/* EMPLOYER */}
       <Route
         path="/employer/dashboard"
@@ -129,7 +129,6 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-
       {/* EMPLOYER JOB MANAGEMENT */}
       <Route
         path="/employer/jobs/new"
@@ -139,7 +138,6 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/employer/jobs"
         element={
@@ -148,7 +146,6 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/employer/jobs/:jobId/applicants"
         element={
@@ -157,7 +154,6 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-
       {/* JOB SEEKER */}
       <Route
         path="/jobseeker/profile"
@@ -167,7 +163,6 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-
       {/* JOB SEEKER JOB SEARCH */}
       <Route
         path="/jobseeker/jobs"
@@ -177,7 +172,6 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-
       {/* JOB SEEKER APPLICATIONS */}
       <Route
         path="/jobseeker/applications"
@@ -187,7 +181,6 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/jobseekers"
         element={
@@ -196,7 +189,6 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-
       {/* SHARED */}
       <Route
         path="/company/:id/history"
@@ -206,7 +198,6 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/employers/:id"
         element={
@@ -215,7 +206,6 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/jobseekers/:id"
         element={
