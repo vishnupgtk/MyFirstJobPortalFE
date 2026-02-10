@@ -1,9 +1,4 @@
-/**
- * Environment Configuration
- * 
- * Centralized configuration management for environment variables.
- * All environment variables should be accessed through this module.
- */
+
 
 // Environment variable validation schema
 const ENV_SCHEMA = {
@@ -97,11 +92,7 @@ const validateConfig = () => {
   
   // Development warnings
   if (config.app.isDevelopment) {
-    // Suppress token storage key warning in development
-    // if (config.security.tokenStorageKey === ENV_SCHEMA.optional.VITE_TOKEN_STORAGE_KEY) {
-    //   warnings.push('Using default token storage key in development');
-    // }
-  }
+
   
   // Production validations
   if (config.app.isProduction) {
