@@ -28,14 +28,14 @@ const Register = () => {
       setToast({
         show: true,
         message: "Account created successfully",
-        type: "success"
+        type: "success",
       });
       setTimeout(() => navigate("/"), 2000);
     } catch (err) {
       setToast({
         show: true,
         message: "Registration failed",
-        type: "error"
+        type: "error",
       });
     }
   };
