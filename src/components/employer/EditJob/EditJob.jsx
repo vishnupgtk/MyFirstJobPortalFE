@@ -1,13 +1,14 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import api from "../../../api/axios";
 import { useAuth } from "../../../store/hooks";
 import Toast from "../../shared/Toast/Toast";
 import EmployerNavbar from "../EmployerNavbar/EmployerNavbar";
 import BackButton from "../../shared/BackButton/BackButton";
 
-export default function PostJob() {
+export default function EditJob() {
   const navigate = useNavigate();
+  const { jobId } = useParams();
   const { user } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -20,8 +21,38 @@ export default function PostJob() {
     salaryRange: "",
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
+
+  useEffect(() => {
+    loadJobDetails();
+  }, [jobId]);
+
+  const loadJobDetails = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/jobs/${jobId}`);
+      setFormData({
+        title: response.data.title || "",
+        description: response.data.description || "",
+        requiredSkills: response.data.requiredSkills || "",
+        experienceLevel: response.data.experienceLevel || "",
+        employmentType: response.data.employmentType || "",
+        location: response.data.location || "",
+        salaryRange: response.data.salaryRange || "",
+      });
+    } catch (err) {
+      console.error("Load job error:", err);
+      setToast({
+        show: true,
+        message: "Failed to load job details",
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -63,26 +94,40 @@ export default function PostJob() {
     e.preventDefault();
     if (!validateForm()) return;
 
-    setLoading(true);
+    setSaving(true);
     try {
-      await api.post("/jobs", formData);
+      await api.put(`/jobs/${jobId}`, formData);
       setToast({
         show: true,
-        message: "Job posted successfully!",
+        message: "Job updated successfully!",
         type: "success",
       });
       setTimeout(() => navigate("/employer/jobs"), 1500);
     } catch (err) {
       setToast({
         show: true,
-        message: "Failed to post job. Please try again.",
+        message: "Failed to update job. Please try again.",
         type: "error",
       });
-      console.error("Post job error:", err);
+      console.error("Update job error:", err);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <>
+        <EmployerNavbar />
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 text-lg font-medium">Loading job details...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -90,14 +135,14 @@ export default function PostJob() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-6">
-
+            <BackButton />
           </div>
           
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6">
-              <h1 className="text-3xl font-bold text-white mb-2">Post a New Job</h1>
-              <p className="text-blue-100">Fill in the details to attract the best candidates</p>
+              <h1 className="text-3xl font-bold text-white mb-2">Edit Job</h1>
+              <p className="text-blue-100">Update the job details</p>
             </div>
 
           {/* Form */}
@@ -236,17 +281,17 @@ export default function PostJob() {
               <button
                 type="button"
                 onClick={() => navigate(-1)}
-                disabled={loading}
+                disabled={saving}
                 className="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={saving}
                 className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Posting..." : "Post Job"}
+                {saving ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </form>

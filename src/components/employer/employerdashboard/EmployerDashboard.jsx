@@ -1,332 +1,455 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import api from "../../../api/axios";
-import CompanyProfileView from "../../common/companyprofileview/CompanyProfileView";
-import CompanyProfileEdit from "../../common/companyprofileedit/CompanyProfileEdit";
-import CommonHeader from "../../layout/CommonHeader/CommonHeader";
-import Toast from "../../shared/Toast/Toast";
 import { useAuth } from "../../../store/hooks";
-import { ROLES } from "../../../constants/roles.jsx";
-import "./EmployerDashboard.css";
+import Toast from "../../shared/Toast/Toast";
+import EmployerNavbar from "../EmployerNavbar/EmployerNavbar";
 
 const EmployerDashboard = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
-  const location = useLocation();
+  const { user } = useAuth();
 
-  const { role } = useAuth();
-
-  // Check if this is the employer's own profile page
-  const isMyProfilePage =
-    location.pathname === "/employer/dashboard" &&
-    !id &&
-    role === ROLES.EMPLOYER;
-
-  const isReadOnlyView = Boolean(id) || role !== ROLES.EMPLOYER;
-
- 
-  const [profile, setProfile] = useState(null);
-  const [editMode, setEditMode] = useState(false);
-  const [showProfileView, setShowProfileView] = useState(isMyProfilePage);
-  const [toast, setToast] = useState({
-    isVisible: false,
-    message: "",
-    type: "success",
-  });
-
-  const showBackButton = role === ROLES.ADMIN && Boolean(id);
-  const showBackButtonForJobSeeker = role === ROLES.JOB_SEEKER && Boolean(id);
-  const showBackButtonForEmployerProfile =
-    role === ROLES.EMPLOYER && showProfileView;
-
-  const showAnyBackButton =
-    showBackButton ||
-    showBackButtonForJobSeeker ||
-    showBackButtonForEmployerProfile;
-
-  // Toast helper function
-  const showToast = (message, type = "success") => {
-    setToast({ isVisible: true, message, type });
-  };
-
-  const hideToast = () => {
-    setToast({ ...toast, isVisible: false });
-  };
+  const [metrics, setMetrics] = useState(null);
+  const [jobsOverview, setJobsOverview] = useState([]);
+  const [recentApplicants, setRecentApplicants] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState({ show: false, message: "", type: "" });
 
   useEffect(() => {
-    loadProfile();
+    loadDashboardData();
+  }, []);
 
-    setShowProfileView(isMyProfilePage);
-  }, [id, location.pathname]);
-
-  const loadProfile = async () => {
+  const loadDashboardData = async () => {
     try {
-      const url = isReadOnlyView ? `/view/company/${id}` : `/company/me`;
+      setLoading(true);
+      const [metricsRes, jobsRes, applicantsRes] = await Promise.all([
+        api.get("/jobs/dashboard/metrics"),
+        api.get("/jobs/dashboard/jobs-overview"),
+        api.get("/jobs/dashboard/recent-applicants"),
+      ]);
 
-      const res = await api.get(url);
-
-      setProfile(res.data);
+      setMetrics(metricsRes.data);
+      setJobsOverview(jobsRes.data);
+      setRecentApplicants(applicantsRes.data);
     } catch (err) {
-      console.error("Failed to load company profile", err);
-
-      // Show specific error message to user
-      const errorMessage =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        "Failed to load company profile";
-
-      showToast(`Error: ${errorMessage}`, "error");
+      console.error("Failed to load dashboard data:", err);
+      setToast({
+        show: true,
+        message: "Failed to load dashboard data",
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSave = async (data) => {
-    if (isReadOnlyView) return;
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
 
-    // Check if profile has required companyId
-    if (!profile?.companyId) {
-      showToast(
-        "Error: Company ID is missing. Please refresh the page and try again.",
-        "error",
-      );
-      return;
-    }
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
 
-    // Client-side validation
-    const validationErrors = validateCompanyData(data);
-    if (validationErrors.length > 0) {
-      showToast(
-        `Please fix the following errors:\n${validationErrors.join("\n")}`,
-        "error",
-      );
-      return;
-    }
+  const getStatusColor = (status) => {
+    const colors = {
+      Pending: "bg-yellow-100 text-yellow-800",
+      Reviewed: "bg-blue-100 text-blue-800",
+      Accepted: "bg-green-100 text-green-800",
+      Rejected: "bg-red-100 text-red-800",
+    };
+    return colors[status] || "bg-gray-100 text-gray-800";
+  };
 
+  const handleQuickAction = async (applicantUserId, jobId, action) => {
     try {
-      const fields = [
-        "companyName",
-        "industry",
-        "description",
-        "address",
-        "locations",
-      ];
-
-      const changedFields = fields.filter(
-        (field) => data[field] !== profile[field],
-      );
-
-      if (changedFields.length === 0) {
-        showToast("No changes detected", "info");
-        setEditMode(false);
-        return;
-      }
-
-      // Allow only one active request cycle per company until admin action.
-      try {
-        const pendingRes = await api.get("/company/pending");
-        const pendingRequests = Array.isArray(pendingRes.data)
-          ? pendingRes.data
-          : [];
-        const hasPendingForCompany = pendingRequests.some(
-          (request) => String(request.companyId) === String(profile.companyId),
-        );
-
-        if (hasPendingForCompany) {
-          showToast(
-            "A change request is already pending. Please wait for admin approval or rejection before submitting another change.",
-            "info",
-          );
-          return;
-        }
-      } catch (pendingError) {
-        console.error("Failed to check pending requests:", pendingError);
-      }
-
-      // Track successful and failed updates
-      const results = {
-        successful: [],
-        failed: [],
-      };
-
-      // Process each changed field
-      for (let field of changedFields) {
-        try {
-          await api.post("/company/request-change", {
-            companyId: profile.companyId,
-            fieldName: field,
-            newValue: data[field],
-          });
-          results.successful.push(field);
-        } catch (fieldError) {
-          console.error(`Failed to update ${field}:`, fieldError);
-
-          // Extract specific error message from backend response
-          const errorMessage =
-            fieldError.response?.data?.message ||
-            fieldError.response?.data?.error ||
-            fieldError.message ||
-            "Unknown error";
-
-          results.failed.push({
-            field,
-            error: errorMessage,
-          });
-        }
-      }
-
-      // Show appropriate success/error messages
-      if (results.successful.length > 0 && results.failed.length === 0) {
-        showToast("Your changes were sent to Admin for approval", "success");
-        setEditMode(false);
-      } else if (results.successful.length > 0 && results.failed.length > 0) {
-        const successMsg = `Successfully submitted: ${results.successful.join(", ")}`;
-        const failMsg = `Failed to submit: ${results.failed.map((f) => `${f.field} (${f.error})`).join(", ")}`;
-        showToast(`${successMsg}\n\n${failMsg}`, "info");
-      } else {
-        // All failed
-        const failMsg = results.failed
-          .map((f) => `${f.field}: ${f.error}`)
-          .join("\n");
-        showToast(`Failed to submit changes:\n${failMsg}`, "error");
-      }
+      await api.put(`/jobs/${jobId}/applicants/${applicantUserId}/status`, {
+        status: action,
+      });
+      setToast({
+        show: true,
+        message: `Application ${action.toLowerCase()} successfully`,
+        type: "success",
+      });
+      loadDashboardData();
     } catch (err) {
-      console.error("Unexpected error during save:", err);
-
-      // Extract meaningful error message
-      const errorMessage =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        err.message ||
-        "An unexpected error occurred";
-
-      showToast(`Error: ${errorMessage}`, "error");
+      setToast({
+        show: true,
+        message: "Failed to update application status",
+        type: "error",
+      });
     }
   };
 
-  // Simple validation function for company data
-  const validateCompanyData = (data) => {
-    const errors = [];
-
-    // Basic required field validation
-    if (!data.companyName?.trim()) {
-      errors.push("• Company name is required");
-    }
-
-    if (!data.industry?.trim()) {
-      errors.push("• Industry is required");
-    }
-
-    return errors;
-  };
-
-  const handleMyProfileClick = () => {
-    setShowProfileView(true);
-    // Update URL without page reload
-    window.history.pushState({}, "", "/employer/dashboard");
-  };
-
-  const handleBackClick = () => {
-    if (role === ROLES.ADMIN) {
-      navigate("/admin/dashboard");
-    } else if (role === ROLES.JOB_SEEKER) {
-      navigate("/dashboard"); // Job seeker's employer list page
-    } else if (role === ROLES.EMPLOYER) {
-      navigate(-1);
-    }
-  };
-
-  if (!profile) return <p>Loading...</p>;
-
-  return (
-    <div className="employer-page">
-      <CommonHeader
-        userName={profile.employerName}
-        showProfileButton={!showProfileView && role === ROLES.EMPLOYER}
-        isReadOnly={isReadOnlyView}
-        showRoleText={!isReadOnlyView}
-        onMyProfileClick={handleMyProfileClick}
-        showEditButton={showProfileView && !isReadOnlyView && !editMode}
-        onEditProfile={() => setEditMode(true)}
-        showMyJobsButton={showProfileView && !isReadOnlyView}
-        showPostJobButton={showProfileView && !isReadOnlyView}
-      />
-
-      {/* Back Button for Admin/JobSeeker View */}
-      {showAnyBackButton && (
-        <div className="back-button-container">
-          <button
-            className="back-btn"
-            onClick={handleBackClick}
-          >
-            Back
-          </button>
-        </div>
-      )}
-
-      <div className="company-banner">
-        <h1>{profile.companyName}</h1>
-        <span className="subtitle">
-          {isReadOnlyView
-            ? ""
-            : showProfileView
-              ? "My Profile - Job Management"
-              : "Employer Dashboard"}
-        </span>
-      </div>
-
-      <section className="stats-grid">
-        <div className="stat-card">
-          <span>Industry</span>
-          <h3>{profile.industry || "-"}</h3>
-        </div>
-
-        <div className="stat-card">
-          <span>Locations</span>
-          <h3>{profile.locations?.split(",").length || 0}</h3>
-        </div>
-      </section>
-
-      {!editMode || isReadOnlyView ? (
-        <CompanyProfileView
-          profile={profile}
-          readOnly={isReadOnlyView}
-          onEdit={!isReadOnlyView ? () => setEditMode(true) : null}
-        />
-      ) : (
-        <CompanyProfileEdit
-          profile={profile}
-          onCancel={() => setEditMode(false)}
-          onSave={handleSave}
-        />
-      )}
-
-      {/* JOB MANAGEMENT FOOTER - ONLY SHOW WHEN NOT IN PROFILE VIEW */}
-      {!showProfileView && !isReadOnlyView && role === ROLES.EMPLOYER && (
-        <div className="dashboard-footer">
-          <h3 className="footer-text">Job Management</h3>
-          <div className="job-actions">
-            <button
-              className="footer-btn primary"
-              onClick={() => navigate("/employer/jobs/new")}
-            >
-              + Post New Job
-            </button>
-            <button
-              className="footer-btn secondary"
-              onClick={() => navigate("/employer/jobs")}
-            >
-              My Jobs
-            </button>
+  if (loading) {
+    return (
+      <>
+        <EmployerNavbar />
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+          <div className="text-center">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-8 h-8 bg-blue-600 rounded-full opacity-20 animate-pulse"></div>
+              </div>
+            </div>
+            <p className="mt-6 text-gray-600 font-medium">
+              Loading your dashboard...
+            </p>
           </div>
         </div>
-      )}
+      </>
+    );
+  }
 
-      {/* Toast Notification */}
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        isVisible={toast.isVisible}
-        onClose={hideToast}
-      />
+  return (
+    <>
+      <EmployerNavbar />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Metrics Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+            <MetricCard
+              title="Active Jobs"
+              value={metrics?.activeJobs || 0}
+              icon="📋"
+              color="blue"
+              onClick={() => navigate("/employer/jobs")}
+            />
+            <MetricCard
+              title="Total Applicants"
+              value={metrics?.totalApplicants || 0}
+              icon="👥"
+              color="purple"
+              onClick={() => navigate("/employer/applicants")}
+            />
+            <MetricCard
+              title="New (24h)"
+              value={metrics?.newApplicants || 0}
+              icon="🆕"
+              color="green"
+              trend={metrics?.newApplicants > 0 ? "up" : null}
+            />
+            <MetricCard
+              title="Shortlisted"
+              value={metrics?.shortlistedCandidates || 0}
+              icon="⭐"
+              color="yellow"
+            />
+            <MetricCard
+              title="Interviews"
+              value={metrics?.interviewsScheduled || 0}
+              icon="📅"
+              color="red"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Jobs Overview */}
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow">
+                <div className="px-6 py-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200 flex justify-between items-center">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Jobs Overview
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Manage your active job postings
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigate("/employer/jobs")}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-semibold flex items-center space-x-1 hover:underline"
+                  >
+
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  {jobsOverview.length === 0 ? (
+                    <div className="px-6 py-16 text-center">
+                      <div className="text-6xl mb-4">📝</div>
+                      <p className="text-gray-500 mb-6 text-lg">
+                        No jobs posted yet
+                      </p>
+                      <button
+                        onClick={() => navigate("/employer/jobs/new")}
+                        className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-md hover:shadow-lg transition-all"
+                      >
+                        <span className="mr-2">+</span>
+                        <span>Post your first job</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <table className="w-full">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Job Title
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Applicants
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            New
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Action
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-100">
+                        {jobsOverview.map((job) => (
+                          <tr
+                            key={job.jobId}
+                            className="hover:bg-blue-50 transition-colors"
+                          >
+                            <td className="px-6 py-4">
+                              <div className="text-sm font-semibold text-gray-900">
+                                {job.title}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Posted {formatDate(job.createdAt)}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="text-sm font-medium text-gray-900">
+                                {job.applicantCount}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              {job.newApplicantCount > 0 ? (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                                  +{job.newApplicantCount}
+                                </span>
+                              ) : (
+                                <span className="text-sm text-gray-400">-</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span
+                                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                                  job.status === "Active"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-gray-100 text-gray-800"
+                                }`}
+                              >
+                                {job.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <button
+                                onClick={() =>
+                                  navigate(
+                                    `/employer/jobs/${job.jobId}/applicants`,
+                                  )
+                                }
+                                className="text-blue-600 hover:text-blue-700 font-semibold hover:underline"
+                              >
+                                View Applicants →
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Applications */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow">
+                <div className="px-6 py-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Recent Applications
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Latest candidate submissions
+                  </p>
+                </div>
+                <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
+                  {recentApplicants.length === 0 ? (
+                    <div className="px-6 py-16 text-center">
+                      <div className="text-5xl mb-4">📭</div>
+                      <p className="text-gray-500 text-sm">
+                        No applications yet
+                      </p>
+                    </div>
+                  ) : (
+                    recentApplicants.map((applicant) => (
+                      <div
+                        key={`${applicant.userId}-${applicant.jobId}`}
+                        className="px-6 py-4 hover:bg-blue-50 transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 truncate">
+                              {applicant.fullName}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate mt-1">
+                              {applicant.jobTitle}
+                            </p>
+                          </div>
+                          <span
+                            className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(applicant.status)}`}
+                          >
+                            {applicant.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-400 font-medium">
+                            {formatDate(applicant.appliedAt)}
+                          </span>
+                          <div className="flex gap-2">
+                            {applicant.status === "Pending" && (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleQuickAction(
+                                      applicant.userId,
+                                      applicant.jobId,
+                                      "Accepted",
+                                    )
+                                  }
+                                  className="p-1.5 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+                                  title="Accept"
+                                >
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M5 13l4 4L19 7"
+                                    />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleQuickAction(
+                                      applicant.userId,
+                                      applicant.jobId,
+                                      "Rejected",
+                                    )
+                                  }
+                                  className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                                  title="Reject"
+                                >
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M6 18L18 6M6 6l12 12"
+                                    />
+                                  </svg>
+                                </button>
+                              </>
+                            )}
+                            <button
+                              onClick={() =>
+                                navigate(`/jobseekers/${applicant.userId}`)
+                              }
+                              className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                              title="View Profile"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 5l7 7-7 7"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {toast.show && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            isVisible={toast.show}
+            onClose={() => setToast({ show: false, message: "", type: "" })}
+          />
+        )}
+      </div>
+    </>
+  );
+};
+
+const MetricCard = ({ title, value, icon, color = "blue", trend, onClick }) => {
+  const colorClasses = {
+    blue: "from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700",
+    purple:
+      "from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700",
+    green:
+      "from-green-500 to-green-600 hover:from-green-600 hover:to-green-700",
+    yellow:
+      "from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700",
+    red: "from-red-500 to-red-600 hover:from-red-600 hover:to-red-700",
+  };
+
+  return (
+    <div
+      onClick={onClick}
+      className={`bg-gradient-to-br ${colorClasses[color]} rounded-xl shadow-md p-6 text-white transform transition-all duration-200 ${
+        onClick ? "cursor-pointer hover:scale-105 hover:shadow-xl" : ""
+      }`}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-4xl opacity-90">{icon}</span>
+        {trend && (
+          <span className="bg-white bg-opacity-20 px-2 py-1 rounded-full text-xs font-bold flex items-center">
+            <svg
+              className="w-3 h-3 mr-1"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+            New
+          </span>
+        )}
+      </div>
+      <div className="text-4xl font-bold mb-2">{value}</div>
+      <div className="text-sm font-medium opacity-90">{title}</div>
     </div>
   );
 };

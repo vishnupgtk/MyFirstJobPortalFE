@@ -3,6 +3,11 @@ const CompanyProfileView = ({ profile, onEdit, readOnly }) => {
     <div className="profile-card">
       <div className="profile-header">
         <h2>Company Profile</h2>
+        {!readOnly && (
+          <button className="btn-edit" onClick={onEdit}>
+            Edit
+          </button>
+        )}
       </div>
 
       <ProfileRow label="Industry" value={profile.industry} />

@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { register } from "../../../services/authService";
 import Toast from "../../shared/Toast/Toast";
+import Navbar from "../../layout/Navbar";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ const Register = () => {
   });
 
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -22,100 +24,202 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
 
     try {
       await register({ ...form, roleId: Number(form.roleId) });
       setToast({
         show: true,
-        message: "Account created successfully",
+        message: "Account created successfully! Redirecting to login...",
         type: "success",
       });
       setTimeout(() => navigate("/"), 2000);
     } catch (err) {
       setToast({
         show: true,
-        message: "Registration failed",
+        message: "Registration failed. Please try again.",
         type: "error",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="auth-wrapper">
-      {/* LEFT BRAND */}
-      <div className="brand-section">
-        <h1>Create Your Account</h1>
-        <p>
-          Join our Job Portal platform and start managing your career or hiring
-          process efficiently.
-        </p>
-      </div>
-
-      {/* RIGHT FORM */}
-      <div className="form-section">
-        <form className="auth-card" onSubmit={handleSubmit}>
-          <h2>Sign Up</h2>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "15px",
-            }}
-          >
-            <input
-              className="input"
-              name="firstName"
-              placeholder="First Name"
-              onChange={handleChange}
-              required
-            />
-
-            <input
-              className="input"
-              name="lastName"
-              placeholder="Last Name"
-              onChange={handleChange}
-              required
-            />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <Navbar />
+      
+      <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-16">
+        <div className="max-w-6xl w-full grid md:grid-cols-2 gap-8 items-center">
+          {/* Left Brand Section */}
+          <div className="text-white space-y-6 hidden md:block">
+            <div className="inline-block">
+              <span className="bg-indigo-500/20 text-indigo-300 px-4 py-2 rounded-full text-sm font-semibold border border-indigo-500/30">
+                Join Us Today! 🚀
+              </span>
+            </div>
+            
+            <h1 className="text-5xl font-bold leading-tight">
+              Start Your
+              <span className="block bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                Career Journey
+              </span>
+            </h1>
+            
+            <p className="text-xl text-gray-300 leading-relaxed">
+              Create your account and unlock access to thousands of job opportunities or find the perfect candidates for your company.
+            </p>
+            
+            <div className="space-y-4 pt-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-indigo-500/20 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <span className="text-gray-300">Free account creation</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <span className="text-gray-300">Access to premium features</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-pink-500/20 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-pink-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <span className="text-gray-300">24/7 support available</span>
+              </div>
+            </div>
           </div>
 
-          <input
-            className="input"
-            name="email"
-            placeholder="Email Address"
-            onChange={handleChange}
-            required
-          />
+          {/* Right Register Form */}
+          <div className="w-full">
+            <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-8 sm:p-12 border border-white/20">
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                  Create Account
+                </h2>
+                <p className="text-gray-600">
+                  Fill in your details to get started
+                </p>
+              </div>
 
-          <input
-            className="input"
-            type="password"
-            name="password"
-            placeholder="Password"
-            onChange={handleChange}
-            required
-          />
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="firstName" className="block text-sm font-semibold text-gray-700 mb-2">
+                      First Name
+                    </label>
+                    <input
+                      id="firstName"
+                      type="text"
+                      name="firstName"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
+                      placeholder="John"
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
 
-          <select
-            className="input"
-            name="roleId"
-            onChange={handleChange}
-            required
-          >
-            <option value="">Select Role</option>
-            <option value="2">Employer</option>
-            <option value="3">Job Seeker</option>
-          </select>
+                  <div>
+                    <label htmlFor="lastName" className="block text-sm font-semibold text-gray-700 mb-2">
+                      Last Name
+                    </label>
+                    <input
+                      id="lastName"
+                      type="text"
+                      name="lastName"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
+                      placeholder="Doe"
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                </div>
 
-          <button className="btn">Create Account</button>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+                    Email Address
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    name="email"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
+                    placeholder="you@example.com"
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
 
-          <div className="links">
-            <span style={{ cursor: "pointer" }} onClick={() => navigate("/")}>
-              Back to Login
-            </span>
+                <div>
+                  <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+                    Password
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    name="password"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
+                    placeholder="••••••••"
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="roleId" className="block text-sm font-semibold text-gray-700 mb-2">
+                    I am a
+                  </label>
+                  <select
+                    id="roleId"
+                    name="roleId"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none bg-white"
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="">Select your role</option>
+                    <option value="2">Employer - I'm hiring</option>
+                    <option value="3">Job Seeker - I'm looking for work</option>
+                  </select>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                >
+                  {isLoading ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Creating account...
+                    </span>
+                  ) : (
+                    'Create Account'
+                  )}
+                </button>
+              </form>
+
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <p className="text-center text-sm text-gray-600">
+                  Already have an account?{' '}
+                  <Link to="/" className="text-indigo-600 hover:text-indigo-700 font-semibold">
+                    Sign in
+                  </Link>
+                </p>
+              </div>
+            </div>
           </div>
-        </form>
+        </div>
       </div>
 
       {toast.show && (
